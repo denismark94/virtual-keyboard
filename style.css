@@ -21,6 +21,7 @@ body {
 
 textarea {
     margin: 20px;
+    resize: vertical;
 }
 
 .row {
@@ -43,10 +44,26 @@ button.active {
     box-shadow: 5px 5px 5px grey;
 }
 
-.functional {
+#CapsLock,#Backspace,#Tab,#Enter,#ShiftLeft {
     flex-grow: 1;
 }
 
+
+.indicator {
+    display: inline;
+    position: absolute;
+    transform: translate(10px, -5px);
+    width: 8px;
+    border-radius: 5px;
+    border: 1px solid black;
+    height: 8px;
+    background-color: transparent;
+}
+
+.indicator.on {
+    background-color: #00FF00;
+
+}
 
 .arrow {
     background-image: url('./assets/triangle.png');
