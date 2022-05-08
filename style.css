@@ -7,6 +7,7 @@ body {
     justify-content: center;
     height: 100vh;
     background-color: gray;
+    overflow-x: scroll;
 }
 
 .container {
@@ -14,9 +15,15 @@ body {
     border: 1px solid black;
     border-radius: 10px;
     box-shadow: 10px 10px 15px lightgrey;
-    width:800px;
+    width:80%;
     display: flex;
     flex-direction: column;
+}
+
+@media screen and (max-width: 932px) {
+    .container {
+        width: 732px;
+    }
 }
 
 textarea {
@@ -31,15 +38,19 @@ textarea {
 }
 
 button {
+    position: relative;
     background-color: lightslategrey;
     height: 40px;
     width: 40px;
     margin: 5px;
     border: 1px solid grey;
     border-radius: 5px;
+    overflow: hidden;
+    padding: 0;
 }
 
 button.active {
+    position: relative;
     background-color: wheat;
     box-shadow: 5px 5px 5px grey;
 }
@@ -52,7 +63,8 @@ button.active {
 .indicator {
     display: inline;
     position: absolute;
-    transform: translate(10px, -5px);
+    top: 10%;
+    right: 5%;
     width: 8px;
     border-radius: 5px;
     border: 1px solid black;

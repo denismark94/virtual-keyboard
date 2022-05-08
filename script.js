@@ -1,48 +1,268 @@
-import values from "./assets/i18n.js";
+import { values, functional, layout } from './assets/i18n.js'; // eslint-disable-line import/extensions
 
-
-let lang = "en";
+let lang = 'en';
 let caps = false;
-let pressed = {};
+const pressed = {};
+let textArea;
+let keyboard;
+let ind;
+let buttons;
 
+function createKeyboard() {
+  const container = document.createElement('div');
+  container.classList.add('container');
+  document.body.appendChild(container);
+  textArea = document.createElement('textarea');
+  textArea.rows = 10;
+  textArea.placeholder = values[lang].placeholder;
+  container.appendChild(textArea);
+  textArea.focus();
+  keyboard = document.createElement('div');
+  keyboard.classList.add('keyboard');
+  container.appendChild(keyboard);
+}
+
+function createButtons() {
+  let button;
+  let row;
+  ind = document.createElement('div');
+  ind.classList.add('indicator');
+  for (let i = 0; i < layout.length; i += 1) {
+    row = document.createElement('div');
+    row.classList.add('row');
+    for (let j = 0; j < layout[i].length; j += 1) {
+      button = document.createElement('button');
+      button.id = layout[i][j];
+      if (layout[i][j].includes('Arrow')) button.classList.add('arrow', layout[i][j].replace('Arrow', '').toLowerCase());
+      if (functional.includes(layout[i][j])) button.classList.add('functional');
+      if (layout[i][j] === 'CapsLock') button.append(ind);
+      row.appendChild(button);
+    }
+    keyboard.appendChild(row);
+  }
+  buttons = document.querySelectorAll('button');
+}
+
+function setText(elem, value) {
+  elem.textContent = value; // eslint-disable-line no-param-reassign
+}
+
+function changeLayout() {
+  let value;
+  buttons.forEach((btn) => {
+    if (!functional.includes(btn.id)) {
+      value = values[lang][btn.id];
+      setText(btn, caps ? value.toUpperCase() : value.toLowerCase());
+      if (values[`alt_${lang}`][btn.id]) {
+        if (pressed.ShiftLeft || pressed.ShiftRight) {
+          setText(btn, values[`alt_${lang}`][btn.id]);
+        } else setText(btn, values[lang][btn.id]);
+      }
+    } else {
+      if (!btn.id.includes('Arrow')) setText(btn, values[lang][btn.id]);
+      if (btn.id === 'CapsLock') btn.appendChild(ind);
+    }
+  });
+  if (caps) ind.classList.add('on');
+  else ind.classList.remove('on');
+  document.querySelector('textarea').placeholder = values[lang].placeholder;
+}
 
 function setLocalStorage() {
-  localStorage.setItem("lang", lang);
+  localStorage.setItem('lang', lang);
+  localStorage.setItem('caps', caps);
 }
 
 function getLocalStorage() {
-  if (localStorage.getItem("lang")) {
-    lang = localStorage.getItem("lang")
+  if (localStorage.getItem('lang')) {
+    lang = localStorage.getItem('lang');
+    caps = localStorage.getItem('caps') === 'true';
   }
   changeLayout();
 }
 
-window.addEventListener('beforeunload', setLocalStorage)
-window.addEventListener('load', getLocalStorage)
+function moveCursor(direction, currentIndex) {
+  const rows = textArea.value.split('\n');
+  let rowIndex = 0;
+  let positionInRow = currentIndex;
+  let result = currentIndex;
+  while (positionInRow > rows[rowIndex].length) {
+    positionInRow -= rows[rowIndex].length + 1;
+    rowIndex += 1;
+  }
+  switch (direction) {
+    case 'up':
+      if (rowIndex > 0) {
+        result -= positionInRow + 1;
+        if (rows[rowIndex - 1].length > positionInRow) {
+          result -= rows[rowIndex - 1].length - positionInRow;
+        }
+      }
+      break;
+    case 'down':
+      if (rowIndex < rows.length - 1) {
+        result += rows[rowIndex].length - positionInRow + 1;
+        if (rows[rowIndex + 1].length >= positionInRow) result += positionInRow;
+      }
+      break;
+    default:
+      break;
+  }
+  return result;
+}
 
-
-
-document.body.addEventListener("keydown", press);
-document.body.addEventListener("keyup", release);
-
+function print(code) {
+  let val;
+  let index;
+  let buffer;
+  switch (code) {
+    case 'Backspace':
+      if (textArea.selectionStart !== textArea.selectionEnd) {
+        textArea.setRangeText('', textArea.selectionStart, textArea.selectionEnd, 'start');
+      } else {
+        textArea.setRangeText('', Math.max(textArea.selectionStart - 1, 0), textArea.selectionEnd, 'start');
+      }
+      break;
+    case 'Tab':
+      textArea.setRangeText('\t', textArea.selectionStart, textArea.selectionEnd, 'end');
+      break;
+    case 'ArrowLeft':
+      if (pressed.ShiftLeft || pressed.ShiftRight) {
+        textArea.selectionStart -= 1;
+        break;
+      }
+      if (textArea.selectionStart === textArea.selectionEnd) textArea.selectionStart -= 1;
+      textArea.selectionEnd = textArea.selectionStart;
+      break;
+    case 'ArrowRight':
+      if (pressed.ShiftLeft || pressed.ShiftRight) {
+        textArea.selectionEnd += 1;
+        break;
+      }
+      if (textArea.selectionStart === textArea.selectionEnd) {
+        textArea.selectionStart += 1;
+        textArea.selectionEnd = textArea.selectionStart;
+      } else textArea.selectionStart = textArea.selectionEnd;
+      break;
+    case 'ArrowDown':
+      index = moveCursor('down', textArea.selectionEnd);
+      if (pressed.ShiftLeft || pressed.ShiftRight) {
+        textArea.selectionEnd = index;
+      } else {
+        textArea.selectionStart = index;
+        textArea.selectionEnd = textArea.selectionStart;
+      }
+      break;
+    case 'ArrowUp':
+      index = moveCursor('up', textArea.selectionStart);
+      if (pressed.ShiftLeft || pressed.ShiftRight) {
+        textArea.selectionStart = index;
+      } else {
+        textArea.selectionStart = index;
+        textArea.selectionEnd = textArea.selectionStart;
+      }
+      break;
+    case 'Enter':
+      textArea.setRangeText('\n', textArea.selectionStart, textArea.selectionEnd, 'end');
+      break;
+    case 'CapsLock':
+      caps = !caps;
+      changeLayout();
+      break;
+    case 'AltLeft':
+      if (pressed.ShiftLeft || pressed.ShiftRight) {
+        lang = lang === 'en' ? 'ru' : 'en';
+        changeLayout();
+      }
+      break;
+    case 'AltRight':
+      if (pressed.ShiftLeft || pressed.ShiftRight) {
+        lang = lang === 'en' ? 'ru' : 'en';
+        changeLayout();
+      }
+      break;
+    case 'ControlLeft':
+      if (pressed.ShiftLeft || pressed.ShiftRight) {
+        lang = lang === 'en' ? 'ru' : 'en';
+        changeLayout();
+      }
+      break;
+    case 'ControlRight':
+      if (pressed.ShiftLeft || pressed.ShiftRight) {
+        lang = lang === 'en' ? 'ru' : 'en';
+        changeLayout();
+      }
+      break;
+    case 'ShiftLeft':
+      if (pressed.AltLeft || pressed.AltRight || pressed.ControlLeft || pressed.ControlRight) {
+        lang = lang === 'en' ? 'ru' : 'en';
+        changeLayout();
+      }
+      break;
+    case 'ShiftRight':
+      if (pressed.AltLeft || pressed.AltRight || pressed.ControlLeft || pressed.ControlRight) {
+        lang = lang === 'en' ? 'ru' : 'en';
+        changeLayout();
+      }
+      break;
+    case 'Delete':
+      if (textArea.selectionStart !== textArea.selectionEnd) {
+        textArea.setRangeText('', textArea.selectionStart, textArea.selectionEnd, 'end');
+      } else {
+        textArea.setRangeText('', textArea.selectionStart, textArea.selectionEnd + 1, 'end');
+      }
+      break;
+    case 'MetaLeft':
+      break;
+    default:
+      if (pressed.ControlLeft || pressed.ControlRight) {
+        switch (code) {
+          case 'KeyA':
+            textArea.selectionStart = 0;
+            textArea.selectionEnd = textArea.value.length;
+            break;
+          case 'KeyC':
+            buffer = textArea.value.substring(textArea.selectionStart, textArea.selectionEnd);
+            navigator.clipboard.writeText(buffer).then();
+            break;
+          case 'KeyV':
+            navigator.clipboard.readText().then((data) => textArea.setRangeText(data, textArea.selectionStart, textArea.selectionEnd, 'end'));
+            break;
+          case 'KeyX':
+            buffer = textArea.value.substring(textArea.selectionStart, textArea.selectionEnd);
+            navigator.clipboard.writeText(buffer).then();
+            textArea.setRangeText('', textArea.selectionStart, textArea.selectionEnd, 'end');
+            break;
+          default:
+            break;
+        }
+        break;
+      }
+      if (values[`alt_${lang}`][code]) {
+        val = pressed.ShiftLeft || pressed.ShiftRight ? values[`alt_${lang}`][code] : values[lang][code];
+      } else val = caps ? values[lang][code].toUpperCase() : values[lang][code];
+      textArea.setRangeText(val, textArea.selectionStart, textArea.selectionEnd, 'end');
+      break;
+  }
+}
 
 function press(event) {
   let code;
   switch (event.type) {
-    case "keydown":
+    case 'keydown':
       code = event.code;
-      if (code in values[lang]) {
-        event.preventDefault();
-      }
       break;
-    case "mousedown":
+    case 'mousedown':
       code = event.target.id;
       break;
+    default:
+      break;
   }
-  let btn = document.getElementById(code);
-  btn.classList.add("active");
+  if (!(code in values[lang])) return;
+  event.preventDefault();
+  document.getElementById(code).classList.add('active');
   pressed[code] = true;
-  if (code === "ShiftLeft" || code === "ShiftRight") {
+  if (code === 'ShiftLeft' || code === 'ShiftRight') {
     caps = !caps;
     changeLayout();
   }
@@ -52,417 +272,37 @@ function press(event) {
 function release(event) {
   let code;
   switch (event.type) {
-    case "keyup":
+    case 'keyup':
       code = event.code;
       break;
-    case "mouseup":
+    case 'mouseup':
       code = event.target.id;
       break;
+    default:
+      break;
   }
-  let btn = document.getElementById(code);
-  btn.classList.remove("active");
+  if (!(code in values[lang])) return;
+  event.preventDefault();
+  document.getElementById(code).classList.remove('active');
   pressed[code] = false;
-  if (code === "ShiftLeft" || code === "ShiftRight") {
+  if (code === 'ShiftLeft' || code === 'ShiftRight') {
     caps = !caps;
     changeLayout();
   }
   textArea.focus();
 }
 
-let container = document.createElement("div");
-container.classList.add("container");
-document.body.appendChild(container);
-
-let textArea = document.createElement("textarea");
-textArea.rows = 10;
-textArea.placeholder = values[lang]["placeholder"];
-
-container.appendChild(textArea);
-textArea.focus();
-
-let keyboard = document.createElement("div");
-keyboard.classList.add("keyboard");
-container.appendChild(keyboard);
-let button;
-
-let layout = [
-  [
-    "Backquote",
-    "Digit1",
-    "Digit2",
-    "Digit3",
-    "Digit4",
-    "Digit5",
-    "Digit6",
-    "Digit7",
-    "Digit8",
-    "Digit9",
-    "Digit0",
-    "Minus",
-    "Equal",
-    "Backspace",
-  ],
-  [
-    "Tab",
-    "KeyQ",
-    "KeyW",
-    "KeyE",
-    "KeyR",
-    "KeyT",
-    "KeyY",
-    "KeyU",
-    "KeyI",
-    "KeyO",
-    "KeyP",
-    "BracketLeft",
-    "BracketRight",
-    "Backslash",
-    "Delete",
-  ],
-  [
-    "CapsLock",
-    "KeyA",
-    "KeyS",
-    "KeyD",
-    "KeyF",
-    "KeyG",
-    "KeyH",
-    "KeyJ",
-    "KeyK",
-    "KeyL",
-    "Semicolon",
-    "Quote",
-    "Enter",
-  ],
-  [
-    "ShiftLeft",
-    "IntlBackslash",
-    "KeyZ",
-    "KeyX",
-    "KeyC",
-    "KeyV",
-    "KeyB",
-    "KeyN",
-    "KeyM",
-    "Period",
-    "Comma",
-    "Slash",
-    "ArrowUp",
-    "ShiftRight",
-  ],
-  [
-    "ControlLeft",
-    "MetaLeft",
-    "AltLeft",
-    "Space",
-    "AltRight",
-    "ControlRight",
-    "ArrowLeft",
-    "ArrowDown",
-    "ArrowRight",
-  ],
-];
-
-let functional = [
-  "Backspace",
-  "Tab",
-  "CapsLock",
-  "Delete",
-  "Enter",
-  "ShiftLeft",
-  "ShiftRight",
-  "ControlLeft",
-  "ControlRight",
-  "MetaLeft",
-  "AltLeft",
-  "AltRight",
-  "ArrowLeft",
-  "ArrowUp",
-  "ArrowRight",
-  "ArrowDown",
-];
-
-function createButtons() {
-  let ind = document.createElement("div");
-  ind.classList.add("indicator");
-  for (let i = 0; i < layout.length; i++) {
-    let row = document.createElement("div");
-    row.classList.add("row");
-    for (let j = 0; j < layout[i].length; j++) {
-      button = document.createElement("button");
-      button.id = layout[i][j];
-      if (layout[i][j].includes("Arrow"))
-        button.classList.add(
-          "arrow",
-          layout[i][j].replace("Arrow", "").toLowerCase()
-        );
-      if (functional.includes(layout[i][j])) button.classList.add("functional");
-      if (layout[i][j] === "CapsLock") {
-        button.append(ind);
-      }
-      row.appendChild(button);
-    }
-    keyboard.appendChild(row);
-  }
-}
-
-createButtons();
-
-let buttons = document.querySelectorAll("button");
-buttons.forEach((btn) => {
-  btn.addEventListener("mousedown", press);
-  btn.addEventListener("mouseup", release);
-});
-
-// changeLayout();
-
-function print(code) {
-  let rows, index, count;
-  switch (code) {
-    case "Backspace":
-      if (textArea.selectionStart != textArea.selectionEnd) {
-        textArea.setRangeText(
-          "",
-          textArea.selectionStart,
-          textArea.selectionEnd,
-          "start"
-        );
-      } else {
-        textArea.setRangeText(
-          "",
-          Math.max(textArea.selectionStart - 1, 0),
-          textArea.selectionEnd,
-          "start"
-        );
-      }
-      break;
-    case "Tab":
-      textArea.setRangeText(
-        "\t",
-        textArea.selectionStart,
-        textArea.selectionEnd,
-        "end"
-      );
-      break;
-    case "ArrowLeft":
-      if (pressed["ShiftLeft"] || pressed["ShiftRight"]) {
-        textArea.selectionStart -= 1;
-        break;
-      }
-      if (textArea.selectionStart === textArea.selectionEnd)
-        textArea.selectionStart -= 1;
-      textArea.selectionEnd = textArea.selectionStart;
-      break;
-    case "ArrowRight":
-      if (pressed["ShiftLeft"] || pressed["ShiftRight"]) {
-        textArea.selectionEnd += 1;
-        break;
-      }
-      if (textArea.selectionStart === textArea.selectionEnd) {
-        textArea.selectionStart += 1;
-        textArea.selectionEnd = textArea.selectionStart;
-      } else textArea.selectionStart = textArea.selectionEnd;
-      break;
-    case "ArrowDown":
-      rows = textArea.value.split("\n");
-      count = textArea.selectionEnd;
-      index = textArea.selectionEnd;
-      for (let i = 0; i < rows.length - 1; i++) {
-        if (count < rows[i].length + 1) {
-          index += Math.min(
-            rows[i].length + 1,
-            rows[i].length - count + rows[i + 1].length + 1
-          );
-          break;
-        } else {
-          count -= rows[i].length + 1;
-        }
-      }
-      if (pressed["ShiftLeft"] || pressed["ShiftRight"]) {
-        textArea.selectionEnd = index;
-      } else {
-        textArea.selectionStart = index;
-        textArea.selectionEnd = textArea.selectionStart;
-      }
-      break;
-    case "ArrowUp":
-      rows = textArea.value.split("\n");
-      count = textArea.selectionStart;
-      index = textArea.selectionStart;
-      for (let i = 0; i < rows.length; i++) {
-        if (count < rows[i].length + 1) {
-          if (i > 0) {
-            index -=
-              rows[i - 1].length < count ? count + 1 : rows[i].length + 1;
-          }
-          break;
-        } else {
-          count -= rows[i].length + 1;
-        }
-      }
-      if (pressed["ShiftLeft"] || pressed["ShiftRight"]) {
-        textArea.selectionStart = index;
-      } else {
-        textArea.selectionStart = index;
-        textArea.selectionEnd = textArea.selectionStart;
-      }
-      break;
-    case "Enter":
-      textArea.setRangeText(
-        "\n",
-        textArea.selectionStart,
-        textArea.selectionEnd,
-        "end"
-      );
-      break;
-    case "CapsLock":
-      caps = !caps;
-      changeLayout();
-      break;
-    case "AltLeft":
-      if (pressed["ShiftLeft"] || pressed["ShiftRight"]) {
-        lang = lang === "en" ? "ru" : "en";
-        changeLayout();
-      }
-      break;
-    case "AltRight":
-      if (pressed["ShiftLeft"] || pressed["ShiftRight"]) {
-        lang = lang === "en" ? "ru" : "en";
-        changeLayout();
-      }
-      break;
-    case "ControlLeft":
-      if (pressed["ShiftLeft"] || pressed["ShiftRight"]) {
-        lang = lang === "en" ? "ru" : "en";
-        changeLayout();
-      }
-      break;
-    case "ControlRight":
-      if (pressed["ShiftLeft"] || pressed["ShiftRight"]) {
-        lang = lang === "en" ? "ru" : "en";
-        changeLayout();
-      }
-      break;
-    case "ShiftLeft":
-      if (
-        pressed["AltLeft"] ||
-        pressed["AltRight"] ||
-        pressed["ControlLeft"] ||
-        pressed["ControlRight"]
-      ) {
-        lang = lang === "en" ? "ru" : "en";
-        changeLayout();
-      }
-      break;
-    case "ShiftRight":
-      if (
-        pressed["AltLeft"] ||
-        pressed["AltRight"] ||
-        pressed["ControlLeft"] ||
-        pressed["ControlRight"]
-      ) {
-        lang = lang === "en" ? "ru" : "en";
-        changeLayout();
-      }
-      break;
-    case "Delete":
-      if (textArea.selectionStart != textArea.selectionEnd) {
-        textArea.setRangeText(
-          "",
-          textArea.selectionStart,
-          textArea.selectionEnd,
-          "end"
-        );
-      } else {
-        textArea.setRangeText(
-          "",
-          textArea.selectionStart,
-          textArea.selectionEnd + 1,
-          "end"
-        );
-      }
-      break;
-    case "MetaLeft":
-      break;
-    default:
-      if (pressed["ControlLeft"] || pressed["ControlRight"]) {
-        switch (code) {
-          case "KeyA":
-            textArea.selectionStart = 0;
-            textArea.selectionEnd = textArea.value.length;
-            break;
-          case "KeyC":
-            navigator.clipboard
-              .writeText(
-                textArea.value.substring(
-                  textArea.selectionStart,
-                  textArea.selectionEnd
-                )
-              )
-              .then();
-            break;
-          case "KeyV":
-            navigator.clipboard
-              .readText()
-              .then((data) =>
-                textArea.setRangeText(
-                  data,
-                  textArea.selectionStart,
-                  textArea.selectionEnd,
-                  "end"
-                )
-              );
-            break;
-          case "KeyX":
-            navigator.clipboard.writeText(
-              textArea.value.substring(
-                textArea.selectionStart,
-                textArea.selectionEnd
-              )
-            );
-            textArea.setRangeText(
-              "",
-              textArea.selectionStart,
-              textArea.selectionEnd,
-              "end"
-            );
-            break;
-        }
-        break;
-      }
-      let val;
-      if (values[`alt_${lang}`][code])
-        val =
-          pressed["ShiftLeft"] || pressed["ShiftRight"]
-            ? values[`alt_${lang}`][code]
-            : values[lang][code];
-      else val = caps ? values[lang][code].toUpperCase() : values[lang][code];
-      textArea.setRangeText(
-        val,
-        textArea.selectionStart,
-        textArea.selectionEnd,
-        "end"
-      );
-      break;
-  }
-}
-
-function changeLayout() {
-  let ind = document.querySelector(".indicator");
+function assignListeners() {
+  window.addEventListener('beforeunload', setLocalStorage);
+  window.addEventListener('load', getLocalStorage);
+  document.body.addEventListener('keydown', press);
+  document.body.addEventListener('keyup', release);
   buttons.forEach((btn) => {
-    if (!functional.includes(btn.id)) {
-      btn.textContent = caps? values[lang][btn.id].toUpperCase(): values[lang][btn.id].toLowerCase();
-      if (values[`alt_${lang}`][btn.id])
-        if (pressed["ShiftLeft"] || pressed["ShiftRight"])
-          btn.textContent = values[`alt_${lang}`][btn.id];
-        else btn.textContent = values[lang][btn.id];
-    } else {
-      if (!btn.id.includes("Arrow")) btn.textContent = values[lang][btn.id];
-      if (btn.id === "CapsLock") btn.appendChild(ind);
-    }
+    btn.addEventListener('mousedown', press);
+    btn.addEventListener('mouseup', release);
   });
-  if (caps) ind.classList.add("on");
-  else ind.classList.remove("on");
-
-  document.querySelector("textarea").placeholder = values[lang]["placeholder"];
 }
+
+createKeyboard();
+createButtons();
+assignListeners();
