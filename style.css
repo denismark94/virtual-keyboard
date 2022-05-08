@@ -43,6 +43,11 @@ button {
     padding: 0;
 }
 
+button:hover {
+    cursor: pointer;
+    background-color: wheat;
+}
+
 button.active {
     position: relative;
     background-color: wheat;
