@@ -15,15 +15,9 @@ body {
     border: 1px solid black;
     border-radius: 10px;
     box-shadow: 10px 10px 15px lightgrey;
-    width:80%;
+    width:800px;
     display: flex;
     flex-direction: column;
-}
-
-@media screen and (max-width: 932px) {
-    .container {
-        width: 732px;
-    }
 }
 
 textarea {
