@@ -1,0 +1,100 @@
+body {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    align-content: center;
+    justify-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: gray;
+    overflow-x: scroll;
+}
+
+.container {
+    background-color: white;
+    border: 1px solid black;
+    border-radius: 10px;
+    box-shadow: 10px 10px 15px lightgrey;
+    width:800px;
+    display: flex;
+    flex-direction: column;
+}
+
+textarea {
+    margin: 20px;
+    resize: vertical;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+button {
+    position: relative;
+    background-color: lightslategrey;
+    height: 40px;
+    width: 40px;
+    margin: 5px;
+    border: 1px solid grey;
+    border-radius: 5px;
+    overflow: hidden;
+    padding: 0;
+}
+
+button:hover {
+    cursor: pointer;
+    background-color: wheat;
+}
+
+button.active {
+    position: relative;
+    background-color: wheat;
+    box-shadow: 5px 5px 5px grey;
+}
+
+#CapsLock,#Backspace,#Tab,#Enter,#ShiftLeft {
+    flex-grow: 1;
+}
+
+
+.indicator {
+    display: inline;
+    position: absolute;
+    top: 10%;
+    right: 5%;
+    width: 8px;
+    border-radius: 5px;
+    border: 1px solid black;
+    height: 8px;
+    background-color: transparent;
+}
+
+.indicator.on {
+    background-color: #00FF00;
+
+}
+
+.arrow {
+    background-image: url('./assets/triangle.png');
+    background-size: 60%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.down {
+    transform: rotate(180deg);
+}
+
+.left {
+    transform: rotate(270deg);
+}
+
+.right {
+    transform: rotate(90deg);
+}
+
+#Space {
+    flex-grow: 10;
+}
